@@ -52,7 +52,7 @@ def numerize_string_answers(answers):
         '2/3rds': 2/3,
         '40~ AU': 5.984e+12, ## meters
         '300m': 300 * 10**6, ## pop of US question - m probably millions
-        '15km': 15 * 1000
+        '15km': 15 * 1000        
     }
     new_answers = []
     for answer in answers:
@@ -88,6 +88,9 @@ def convert_to_float(frac_str):
         frac = float(num) / float(denom)
         return whole - frac if whole < 0 else whole + frac
 
+def nullish(answer):
+    return answer is None or pd.isnull(answer)
+    
 if __name__ == '__main__':
     fpath = sys.argv[1]
     outpath = 'data/long_dat.csv'
@@ -95,5 +98,5 @@ if __name__ == '__main__':
     long_dat = wide_to_long(dat)
     long_dat = remove_emails(long_dat)
     long_dat['answer'] = numerize_string_answers(long_dat['answer'])
-    long_dat = long_dat[~long_dat['answer'].isnull()]
+    long_dat = long_dat[~long_dat['answer'].apply(nullish)]
     write_data(long_dat, outpath)
