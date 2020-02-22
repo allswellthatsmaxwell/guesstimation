@@ -146,9 +146,19 @@ def prob_transform(l):
 def log_transform(l):
     return [math.log(e) for e in l]
 
-for i in range(len(questions)):
-    g = get_responses(questions[i])
-    print(g)
-    if actual_answers[i]<g[0] or actual_answers[i]>g[-1]:
-        print(rows[0][questions[i]],actual_answers[i] )
+#print(questions[0])
+#exit
+
+question_names = rows[0]
+#print(rows[0])
+#exit
+
+for i, question_idx in enumerate(questions):
+    responses = get_responses(question_idx)
+    question_name = question_names[i]
+    responses_str = ','.join([str(x) for x in responses])
+    s = f"{question_name}|{responses_str}"
+    print(s)
+    #if actual_answers[i]<g[0] or actual_answers[i]>g[-1]:
+    #    print(rows[0][questions[i]],actual_answers[i] )
 
