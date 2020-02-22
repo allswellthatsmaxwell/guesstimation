@@ -1,6 +1,14 @@
 library(readr)
 library(dplyr)
 library(magrittr)
+library(ggplot2)
 
-FNAME <- '../data/meetup_data_v1.csv'
-raw_dat <- read_csv(FNAME)
+FNAME <- '../data/long_dat.csv'
+dat <- read_csv(FNAME)
+
+questions <- dat %$% unique(question)
+dat %>%
+  ggplot(aes(x = answer)) +
+  geom_histogram() +
+  theme_bw() +
+  facet_wrap(~question, scales = "free")
