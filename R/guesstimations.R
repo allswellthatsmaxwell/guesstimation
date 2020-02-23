@@ -10,11 +10,24 @@ RESPONSES_FNAME <- '../data/long_dat.csv'
 ANSWERS_FNAME <- '../data/answers.psv'
 QUESTIONS_COL <- 'short_question'
 
+get_kth_max <- function(dat, k) {
+  dat %>%
+    group_by(question) %>%
+    mutate(rnk = n() - rank(answer)) %>%
+    dplyr::filter(rnk == k) %>%
+    distinct(question, answer)
+}
+
 get_question_stats <- function(dat) {
+  second_maxs <- get_kth_max(dat, 2) %>% rename(second_highest_response = answer)
+  third_maxs <- get_kth_max(dat, 3) %>% rename(third_highest_response = answer)
+  
   dat %>%
     group_by(question) %>%
     summarize(answers = n(), avg_response_value = mean(answer),
-              highest_response = max(answer), lowest_response = min(answer))
+              highest_response = max(answer), lowest_response = min(answer)) %>%
+    left_join(second_maxs, by = 'question') %>%
+    left_join(third_maxs, by = 'question')
 }
 
 get_group_stats <- function(dat) {
@@ -66,15 +79,17 @@ USE_SHORT_NAMES <- TRUE
 dat <- read_data(RESPONSES_FNAME, use_short_names = USE_SHORT_NAMES)
 answers_dat <- read_answers_data(ANSWERS_FNAME)
 
-questions <- dat %$% unique(question)
-question_stats_table <- dat %>% get_question_stats()
+invs_dat <- dat %>% dplyr::filter(question_group %in% groups_to_investigate)
+pred_dat <- dat %>% dplyr::filter(question_group %in% groups_to_predict_for)
+
+question_stats_table <- invs_dat %>% 
+  get_question_stats() %>%
+  left_join(answers_dat, by = "question")
 group_stats_table <- dat %>% get_group_stats()
 
 groups_to_investigate <- c("Group A", "Group B")
 groups_to_predict_for <- c("Group C", "Group D")
 
-invs_dat <- dat %>% dplyr::filter(question_group %in% groups_to_investigate)
-pred_dat <- dat %>% dplyr::filter(question_group %in% groups_to_predict_for)
 
 
 invs_dat %>%
@@ -85,5 +100,6 @@ invs_dat %>%
   geom_vline(data = answers_dat, aes(xintercept = true_answer),
              color = 'red')
 
+## Next, look into outlier detection & removal / dampening.
 
-  
+## Also look into - are there consistent high guessers and low guessers?
