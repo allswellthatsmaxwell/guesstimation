@@ -6,6 +6,7 @@ the path to the wide raw file as the first argument to the script.
 
 import pandas as pd
 import sys
+from typing import List, Any, Iterable
 
 COL_RENAMES = {
     'Timestamp': 'timestamp',
@@ -17,19 +18,36 @@ def wide_to_long(wide_dat: pd.DataFrame) -> pd.DataFrame:
     Expands the wide-format raw input wide_data, with one column per question,
     into a one-line-per-(question-answer-pair) wide_dataframe.
     """
-    questions_answers = {}
-    for colname in wide_dat.columns:
-        if colname not in ('timestamp', 'question_group'):
-            questions_answers[colname] = [
-                x for x in wide_dat[colname] if x is not None
-                and not pd.isnull(x)]
-    rows = []
-    for question, answers in questions_answers.items():
-        for answer in answers:
-            row = (question, answer)
-            rows.append(row)
-    return pd.DataFrame(rows, columns=['question', 'answer'])
+    non_question_cols = ['timestamp', 'question_group']
+    question_cols = [c for c in wide_dat.columns if c not in non_question_cols] 
+    all_new_rows = []
+    for _, row in wide_dat.iterrows():
+        new_rows = handle_wide_row(row, non_question_cols, question_cols)
+        all_new_rows.extend(new_rows)
+    return pd.DataFrame(
+        all_new_rows, columns = non_question_cols + ['question', 'answer'])
 
+def handle_wide_row(row, non_question_cols: Iterable[str],
+                    question_cols: Iterable[str]) -> List[Any]:
+    """
+    :param row: One row from the original raw wide file,
+    as a named row (such as is given by iterrows over a dataframe).
+    
+    :param non_question_cols: columns corresponding to metadata
+    to keep for each response. Names that must be present in row.
+
+    :param question cols: columns corresponding to questions.
+    Names that must be present in row.
+    """
+    survey_metadata = [row[col] for col in non_question_cols]
+    new_rows = []
+    for question in question_cols:
+        answer = row[question]
+        if not nullish(answer):
+            new_row = survey_metadata + [question, answer]
+            new_rows.append(new_row)
+    return new_rows
+ 
 def read_data(fpath) -> pd.DataFrame:
     """ :param fpath: path to a csv """
     dat = pd.read_csv(fpath)
