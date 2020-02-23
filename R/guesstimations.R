@@ -11,16 +11,18 @@ dat %<>% mutate(answer = pmin(answer, MAX_ANSWER_ALLOWED))
 
 answers_dat <- read_delim(ANSWERS_FNAME, delim = '|')
 
-aquestions <- dat %$% unique(question)
+questions <- dat %$% unique(question)
 question_counts_table <- dat %>%
   group_by(question) %>%
   summarize(answers = n())
 
 dat %>%
   ggplot(aes(x = answer)) +
-  geom_histogram() +
+  geom_histogram(bins = 15) +
   theme_bw() +
-  facet_wrap(~question, scales = "free")
+  facet_wrap(~question, scales = "free") +
+  geom_vline(data = answers_dat, aes(xintercept = true_answer),
+             color = 'red')
 
 plots <- lapply(questions, function(q) {
   p <- dat %>%
