@@ -12,9 +12,10 @@ dat %<>% mutate(answer = pmin(answer, MAX_ANSWER_ALLOWED))
 answers_dat <- read_delim(ANSWERS_FNAME, delim = '|')
 
 questions <- dat %$% unique(question)
-question_counts_table <- dat %>%
+question_stats_table <- dat %>%
   group_by(question) %>%
-  summarize(answers = n())
+  summarize(answers = n(), avg_response_value = mean(answer),
+            highest_response = max(answer), lowest_response = min(answer))
 
 dat %>%
   ggplot(aes(x = answer)) +
@@ -24,16 +25,5 @@ dat %>%
   geom_vline(data = answers_dat, aes(xintercept = true_answer),
              color = 'red')
 
-plots <- lapply(questions, function(q) {
-  p <- dat %>%
-    dplyr::filter(question == q) %>%
-    mutate(answer = pmin(answer, )) %>%
-    ggplot(aes(x = answer)) +
-    geom_histogram() +
-    theme_bw()
-})
 
-for (p in plots) {
-  print(p)
-}
   

@@ -1,3 +1,9 @@
+"""
+Functions for transforming the raw meetup data to long-format
+(one row per question-response pair). If running from CMD, pass
+the path to the wide raw file as the first argument to the script.
+"""
+
 import pandas as pd
 import sys
 
@@ -6,12 +12,16 @@ COL_RENAMES = {
     'The 40 questions in this survey have been placed into four arbitrary groups of 10, to make the survey shorter. Pick a group of questions, and if you like it you can take this survey again and pick another group.': 'question_group'
 }
 
-def wide_to_long(dat):
+def wide_to_long(wide_dat: pd.DataFrame) -> pd.DataFrame:
+    """
+    Expands the wide-format raw input wide_data, with one column per question,
+    into a one-line-per-(question-answer-pair) wide_dataframe.
+    """
     questions_answers = {}
-    for colname in dat.columns:
+    for colname in wide_dat.columns:
         if colname not in ('timestamp', 'question_group'):
             questions_answers[colname] = [
-                x for x in dat[colname] if x is not None
+                x for x in wide_dat[colname] if x is not None
                 and not pd.isnull(x)]
     rows = []
     for question, answers in questions_answers.items():
@@ -20,20 +30,30 @@ def wide_to_long(dat):
             rows.append(row)
     return pd.DataFrame(rows, columns=['question', 'answer'])
 
-def read_data(fpath):
+def read_data(fpath) -> pd.DataFrame:
+    """ :param fpath: path to a csv """
     dat = pd.read_csv(fpath)
     return dat.rename(columns=COL_RENAMES)
 
 def write_data(dat, fpath):
+    """ writes dat as a csv to fpath """
     dat.to_csv(fpath, index=False)
 
-def is_email_question(s):
+def is_email_question(s: str) -> bool:
     return "leave a contact method here" in s
     
-def remove_emails(long_dat):
+def remove_emails(long_dat: pd.DataFrame) -> pd.DataFrame:
+    """ removes the rows that could have people's emails as answers. """
     return long_dat[~long_dat['question'].apply(is_email_question)]
 
-def numerize_string_answers(answers):
+def numerize_string_answers(answers: Iterable) -> List[float]:
+    """
+    Fixes answers noticed to be hard to parse, e.g. maps "21 trillion" 
+    to its integer representation. Also handles fractions and other weird stuff.
+    A list the same length as the input is returned, with the newly-fixed values.
+    If there's no way to parse an answer to a number (e.g. the answer is "Iowa"),
+    returns None in that answer's position.
+    """
     replaces = {
         '20%': 0.2,
         '3.50%': 0.035,
@@ -75,7 +95,11 @@ def numerize_string_answers(answers):
         new_answers.append(new_answer)
     return new_answers
 
-def convert_to_float(frac_str):
+def convert_to_float(frac_str: str) -> float:
+    """ 
+    coverts fractions (e.g. 1/3) to their python float value. 
+    Works for normal floats too (3.0 -> 3.0) 
+    """
     try:
         return float(frac_str)
     except ValueError:        
