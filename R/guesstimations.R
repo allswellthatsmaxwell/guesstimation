@@ -24,7 +24,8 @@ get_question_stats <- function(dat) {
   
   dat %>%
     group_by(question) %>%
-    summarize(answers = n(), avg_response_value = mean(answer),
+    summarize(answers = n(), mean_response_value = mean(answer),
+              median_response_value = median(answer),
               highest_response = max(answer), lowest_response = min(answer)) %>%
     left_join(second_maxs, by = 'question') %>%
     left_join(third_maxs, by = 'question')
@@ -73,11 +74,39 @@ read_answers_data <-
   dat
 }
 
+get_timestamp_ranks <- function(dat) {
+  dat %>%
+    group_by(question_group, question) %>% 
+    arrange(question_group, question, desc(answer)) %>% 
+    mutate(rnk = 1:n()) 
+}
+
+make_facetted_histograms_plot <- function(questions_dat, answers_dat,
+                                          trans = identity) {
+  responses_summary <- questions_dat %>%
+    get_question_stats()
+  answers_dat %<>% dplyr::filter(question %in% questions_dat$question)
+  questions_dat %>%
+    ggplot(aes(x = trans(answer))) +
+    geom_histogram(bins = 15) +
+    theme_bw() +
+    facet_wrap(~question, scales = "free") +
+    geom_vline(data = answers_dat, aes(xintercept = trans(true_answer)),
+               color = 'red') +
+    geom_vline(data = responses_summary, aes(xintercept = trans(mean_response_value)),
+               color = '#33B5FF') +
+    geom_vline(data = responses_summary, aes(xintercept = trans(median_response_value)),
+               color = '#7fff00')
+}
+
 
 USE_SHORT_NAMES <- TRUE
 
 dat <- read_data(RESPONSES_FNAME, use_short_names = USE_SHORT_NAMES)
 answers_dat <- read_answers_data(ANSWERS_FNAME)
+
+groups_to_investigate <- c("Group A", "Group B", "Group C")
+groups_to_predict_for <- c("Group D")
 
 invs_dat <- dat %>% dplyr::filter(question_group %in% groups_to_investigate)
 pred_dat <- dat %>% dplyr::filter(question_group %in% groups_to_predict_for)
@@ -87,19 +116,29 @@ question_stats_table <- invs_dat %>%
   left_join(answers_dat, by = "question")
 group_stats_table <- dat %>% get_group_stats()
 
-groups_to_investigate <- c("Group A", "Group B")
-groups_to_predict_for <- c("Group C", "Group D")
+## Are there guessers guessing consistently high or consistently low?
+timestamp_ranks <- invs_dat %>% 
+  get_timestamp_ranks()
 
+median_ranks <- timestamp_ranks %>%
+  group_by(question_group, timestamp) %>%
+  dplyr::summarize(median_rank = median(rnk)) %>%
+  arrange(median_rank)
 
+median_ranks %>%
+  ggplot(aes(x = median_rank)) +
+  geom_histogram(bins = 20) +
+  theme_bw() +
+  facet_wrap(~question_group)
+
+timestamp_ranks %>%
+  ggplot(aes(x = timestamp, y = rnk)) +
+  geom_point() +
+  theme_bw() +
+  facet_wrap(~question_group)
 
 invs_dat %>%
-  ggplot(aes(x = answer)) +
-  geom_histogram(bins = 15) +
-  theme_bw() +
-  facet_wrap(~question, scales = "free") +
-  geom_vline(data = answers_dat, aes(xintercept = true_answer),
-             color = 'red')
-
+  make_facetted_histograms_plot(answers_dat, trans=log2)
+  
 ## Next, look into outlier detection & removal / dampening.
 
-## Also look into - are there consistent high guessers and low guessers?
