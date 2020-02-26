@@ -135,7 +135,7 @@ def nullish(answer):
     
 if __name__ == '__main__':
     fpath = sys.argv[1]
-    outpath = 'data/long_dat.csv'
+    outpath = sys.argv[2]
     dat = read_data(fpath)
     long_dat = wide_to_long(dat)
     long_dat = remove_emails(long_dat)

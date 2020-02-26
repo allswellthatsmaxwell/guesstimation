@@ -99,6 +99,13 @@ make_facetted_histograms_plot <- function(questions_dat, answers_dat,
                color = '#7fff00')
 }
 
+get_comparison_to_others <- function(dat) {
+  dat %>%
+    inner_join(invs_dat, by = c("question_group", "question"),
+               suffix = c("_this", "_other")) %>%
+    dplyr::filter(timestamp_this != timestamp_other) 
+}
+
 
 USE_SHORT_NAMES <- TRUE
 
@@ -140,5 +147,33 @@ timestamp_ranks %>%
 invs_dat %>%
   make_facetted_histograms_plot(answers_dat, trans=log2)
   
+
+comparison_to_others_dat <- invs_dat %>%
+  get_comparison_to_others()
+
+plot_comparison_to_others <- function(dat, group) {
+  trans <- log10
+  dat %>%
+    group_by(timestamp_this, question_group, question, answer_this) %>%
+    dplyr::summarize(avg_other_answers = median(answer_other)) %>%
+    dplyr::filter(question_group == group) %>%
+    ggplot(aes(x = question, group = timestamp_this)) +
+    geom_line(aes(y = trans(avg_other_answers))) +
+    geom_point(aes(y = trans(answer_this)), color = "red") +
+    facet_wrap(~timestamp_this, scales = "free_y") +
+    labs(title = group) +
+    theme_bw() +
+    theme(axis.text.y = element_blank(), 
+          axis.text.x = element_text(angle = 90, hjust = 1))
+}
+
+comparison_plots <- lapply(
+  groups_to_investigate,
+  function(group) plot_comparison_to_others(
+    comparison_to_others_dat, group))
+
 ## Next, look into outlier detection & removal / dampening.
 
+## OK, first finding: median is better than mean, due to the potential for
+## crazy-high guesses. Alternatively, we could remove or otherwise dampen outliers.
+## But taking the straight mean is bad.
