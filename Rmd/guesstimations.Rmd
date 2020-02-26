@@ -20,7 +20,7 @@ The short names are used throughout the rest of this document.
 
 ## The guesses
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE, fig.width=14, fig.height=30, dpi = 300}
+```{r, echo=FALSE, message=FALSE, warning=FALSE, include=TRUE, fig.width=14, fig.height=30, dpi = 300}
 facetted_histogram_plot
 ```
 
