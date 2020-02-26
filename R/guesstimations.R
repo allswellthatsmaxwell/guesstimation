@@ -1,3 +1,5 @@
+install.packages("kableExtra")
+
 library(readr)
 library(dplyr)
 library(magrittr)
@@ -115,8 +117,9 @@ make_facetted_histograms_plot <- function(questions_dat, answers_dat) {
     ggplot(aes(x = (answer))) +
     geom_histogram(bins = 15) +
     theme_bw() +
-    facet_wrap(~question, scales = "free") +
-    geom_vline(data = lines_dat, aes(xintercept = (val), color = kind)) +
+    facet_wrap(~question, scales = "free", ncol = 3) +
+    geom_vline(data = lines_dat, aes(xintercept = (val), color = kind),
+               size = 2) +
     #annotation_logticks() +
     scale_x_log10(labels = function(x) ifelse(x >= 10**5 | x < 1, 
                                               format(x, scientific = TRUE),
@@ -124,7 +127,7 @@ make_facetted_histograms_plot <- function(questions_dat, answers_dat) {
     scale_color_manual(
       values = c("True value" = true_color, "Mean guess" = mean_color, 
                  "Median guess" = median_color)) +
-    theme(axis.text.y = element_blank()) +
+    theme(axis.text.y = element_blank(), legend.title = element_blank()) +
     labs(x = "log10(guess value)", y = "# guesses", 
          title = "Guesses, and how their average values compare to the true value.")
   }
@@ -147,6 +150,16 @@ groups_to_predict_for <- c("Group D")
 
 invs_dat <- dat %>% dplyr::filter(question_group %in% groups_to_investigate)
 pred_dat <- dat %>% dplyr::filter(question_group %in% groups_to_predict_for)
+
+questions_output_table <- invs_dat %>%
+  distinct(question, question_group) %>%
+  arrange(question_group, question) %>%
+  inner_join(read_delim(SHORT_NAMES_FPATH, delim = '|'),  
+             by = c("question" = "short_question")) %>%
+  mutate(question_group = stringr::str_sub(question_group, -1)) %>%
+  select(Question = question.y, `Short name` = question, Group = question_group) %>%
+  select(Question, `Short name`, Group)
+
 
 question_stats_table <- invs_dat %>% 
   get_question_stats() %>%
@@ -207,6 +220,12 @@ comparison_plots <- lapply(
 
 
 facetted_histogram_plot <- invs_dat %>%
-  make_facetted_histograms_plot(answers_dat)
+  make_facetted_histograms_plot(answers_dat) +
+  theme(strip.text = element_text(size = 22),
+        axis.text = element_text(size = 18),
+        legend.text = element_text(size = 24),
+        plot.title = element_text(size = 24),
+        axis.title = element_text(size = 24),
+        legend.position = "top")
 
 facetted_histogram_plot

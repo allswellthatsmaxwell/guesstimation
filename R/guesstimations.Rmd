@@ -3,19 +3,26 @@ title: "Can we get good estimates of weird quantities by using a bunch of people
 output: html_notebook
 ---
 
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+Last updated: `r format(Sys.time(), "%B %d, %Y, %H:%m %Z")`
 
-```{r}
-plot(cars)
+## Context
+Questions were given in groups of nine. There were 4 groups. We're only looking at groups A, B, and C here, holding D out
+to see if our conclusions give us good out-of-sample predictions.
+
+## The questions
+```{r, echo = FALSE, results = "asis"}
+knitr::kable(questions_output_table) %>%
+  kableExtra::kable_styling(bootstrap_options = "striped")
 ```
 
-```{r}
+The short names are used throughout the rest of this document.  
 
+## The guesses
+
+```{r, echo=FALSE, fig.width=14, fig.height=30, dpi = 300}
+facetted_histogram_plot
 ```
 
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
-
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+It's common for the mean guess to be far from the true value, because of one crazy-high guess. Examples: President age; Big Mac calories; Harry Potter words; Elevators. (Counter-examples: Yellowstone visitors; LEGOs). So the median is the better average to take. 
