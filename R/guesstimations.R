@@ -9,6 +9,7 @@ SHORT_NAMES_FPATH <- '../data/short_names.psv'
 RESPONSES_FNAME <- '../data/long_dat.csv'
 ANSWERS_FNAME <- '../data/answers.psv'
 QUESTIONS_COL <- 'short_question'
+QUESTIONS_PER_GROUP <- 9
 
 get_kth_max <- function(dat, k) {
   dat %>%
@@ -81,23 +82,52 @@ get_timestamp_ranks <- function(dat) {
     mutate(rnk = 1:n()) 
 }
 
-make_facetted_histograms_plot <- function(questions_dat, answers_dat,
-                                          trans = identity) {
+prefix_group_name <- function(question, group) {
+  paste0(stringr::str_sub(group, -1), ": ", question)
+}
+
+make_facetted_histograms_plot <- function(questions_dat, answers_dat) {
+  trans <- log10
+  answers_dat %<>% 
+    dplyr::inner_join(questions_dat %>% distinct(question, question_group),
+                      by = "question") %>%
+    mutate(question = prefix_group_name(question, question_group))
+    
+  questions_dat %<>%
+    mutate(question = prefix_group_name(question, question_group))
+  
   responses_summary <- questions_dat %>%
     get_question_stats()
-  answers_dat %<>% dplyr::filter(question %in% questions_dat$question)
+  
+  true_color <- '#BCBF1D'
+  mean_color <- '#33B5FF'
+  median_color <- 'red'
+  lines_dat <- dplyr::bind_rows(
+    responses_summary %>% select(question, mean_response_value) %>%
+      rename(val = mean_response_value) %>% 
+      mutate(kind = "Mean guess"),
+    responses_summary %>% select(question, val = median_response_value) %>%
+      mutate(kind = "Median guess"),
+    answers_dat %>% select(question, val = true_answer) %>%
+      mutate(kind = "True value")
+  )
   questions_dat %>%
-    ggplot(aes(x = trans(answer))) +
+    ggplot(aes(x = (answer))) +
     geom_histogram(bins = 15) +
     theme_bw() +
     facet_wrap(~question, scales = "free") +
-    geom_vline(data = answers_dat, aes(xintercept = trans(true_answer)),
-               color = 'red') +
-    geom_vline(data = responses_summary, aes(xintercept = trans(mean_response_value)),
-               color = '#33B5FF') +
-    geom_vline(data = responses_summary, aes(xintercept = trans(median_response_value)),
-               color = '#7fff00')
-}
+    geom_vline(data = lines_dat, aes(xintercept = (val), color = kind)) +
+    #annotation_logticks() +
+    scale_x_log10(labels = function(x) ifelse(x >= 10**5 | x < 1, 
+                                              format(x, scientific = TRUE),
+                                              scales::comma(x))) +
+    scale_color_manual(
+      values = c("True value" = true_color, "Mean guess" = mean_color, 
+                 "Median guess" = median_color)) +
+    theme(axis.text.y = element_blank()) +
+    labs(x = "log10(guess value)", y = "# guesses", 
+         title = "Guesses, and how their average values compare to the true value.")
+  }
 
 get_comparison_to_others <- function(dat) {
   dat %>%
@@ -144,9 +174,6 @@ timestamp_ranks %>%
   theme_bw() +
   facet_wrap(~question_group)
 
-invs_dat %>%
-  make_facetted_histograms_plot(answers_dat, trans=log2)
-  
 
 comparison_to_others_dat <- invs_dat %>%
   get_comparison_to_others()
@@ -177,3 +204,9 @@ comparison_plots <- lapply(
 ## OK, first finding: median is better than mean, due to the potential for
 ## crazy-high guesses. Alternatively, we could remove or otherwise dampen outliers.
 ## But taking the straight mean is bad.
+
+
+facetted_histogram_plot <- invs_dat %>%
+  make_facetted_histograms_plot(answers_dat)
+
+facetted_histogram_plot
